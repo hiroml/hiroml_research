@@ -31,7 +31,7 @@ def main():
     # ウォームアップ（初回はコンパイルが入るため計測から除外）
     _ = matmul_basic(mat_a, mat_b).block_until_ready()
     
-    n_iter = 10
+    n_iter = 100
     start_time = time.perf_counter()
     
     for i in range(n_iter):
@@ -40,6 +40,7 @@ def main():
         res.block_until_ready()
         
     end_time = time.perf_counter()
+    sum_time= (end_time-start_time)
     avg_time = (end_time - start_time) / n_iter
     print(f"平均実行時間 ({n_iter}回): {avg_time:.6f} 秒")
 
