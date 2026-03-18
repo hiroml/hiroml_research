@@ -25,7 +25,7 @@ int main() {
 
     // 最大サイズを想定してメモリを事前に大きく確保（ループ内のMallocを排除）
     // ただし過度に大きいとOOM/未定義挙動になるため現実的な上限に制限する
-    int max_dim = 1 << 14; // 16384
+    int max_dim = 1 << 16; // 16384
     int8_t *d_a, *d_b;
     int32_t *d_c;
     CHECK_CUDA(cudaMalloc(&d_a, (size_t)max_dim * max_dim * sizeof(int8_t)));
