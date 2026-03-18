@@ -24,43 +24,55 @@ int main() {
     CHECK_CUDA(cudaMalloc(&d_workspace, workspaceSize));
 
     // 最大サイズを想定してメモリを事前に大きく確保（ループ内のMallocを排除）
-    // ループごとにMalloc/FreeするとH100ではオーバーヘッドが無視できません
-    int max_dim = pow(2, 16); 
+    // ただし過度に大きいとOOM/未定義挙動になるため現実的な上限に制限する
+    int max_dim = 1 << 14; // 16384
     int8_t *d_a, *d_b;
     int32_t *d_c;
     CHECK_CUDA(cudaMalloc(&d_a, (size_t)max_dim * max_dim * sizeof(int8_t)));
     CHECK_CUDA(cudaMalloc(&d_b, (size_t)max_dim * max_dim * sizeof(int8_t)));
     CHECK_CUDA(cudaMalloc(&d_c, (size_t)max_dim * max_dim * sizeof(int32_t)));
+    // 安全のため初期化（未初期化アクセス防止）
+    CHECK_CUDA(cudaMemset(d_a, 1, (size_t)max_dim * max_dim * sizeof(int8_t)));
+    CHECK_CUDA(cudaMemset(d_b, 1, (size_t)max_dim * max_dim * sizeof(int8_t)));
+    CHECK_CUDA(cudaMemset(d_c, 0, (size_t)max_dim * max_dim * sizeof(int32_t)));
 
     cublasLtMatmulDesc_t opDesc;
     // H100のBF16計算は CUBLAS_COMPUTE_32F で内部演算をTF32/FP32で行うのが標準
-    CHECK_CUBLAS(cublasLtMatmulDescCreate(&opDesc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
+    // int8 inputs with int32 accumulation
+    CHECK_CUBLAS(cublasLtMatmulDescCreate(&opDesc, CUBLAS_COMPUTE_32I, CUDA_R_32I));
 
     for (int i = 3; i < 17; ++i) {
         for (int j = 3; j < 17; ++j) {
             for (int l = 3; l < 17; ++l) {
                 int m = pow(2, i), n = pow(2, j), k = pow(2, l);
+
+                // 確保したバッファ上限を超える場合はスキップして未定義アクセスを防止
+                if (m > max_dim || n > max_dim || k > max_dim) {
+                    cerr << "Skipping m=" << m << " n=" << n << " k=" << k << " (exceeds max_dim=" << max_dim << ")" << endl;
+                    continue;
+                }
                 
                 // --- [最適化2] レイアウトの動的更新 ---
                 cublasLtMatrixLayout_t adesc, bdesc, cdesc;
-                CHECK_CUBLAS(cublasLtMatrixLayoutCreate(&adesc, CUDA_R_16BF, m, k, m));
-                CHECK_CUBLAS(cublasLtMatrixLayoutCreate(&bdesc, CUDA_R_16BF, k, n, k));
-                CHECK_CUBLAS(cublasLtMatrixLayoutCreate(&cdesc, CUDA_R_16BF, m, n, m));
+                // 入力は int8、出力は int32
+                CHECK_CUBLAS(cublasLtMatrixLayoutCreate(&adesc, CUDA_R_8I, m, k, m));
+                CHECK_CUBLAS(cublasLtMatrixLayoutCreate(&bdesc, CUDA_R_8I, k, n, k));
+                CHECK_CUBLAS(cublasLtMatrixLayoutCreate(&cdesc, CUDA_R_32I, m, n, m));
 
                 cudaEvent_t start, stop;
                 CHECK_CUDA(cudaEventCreate(&start));
                 CHECK_CUDA(cudaEventCreate(&stop));
 
-                float alpha = 1.0f, beta = 0.0f;
+                int32_t alpha = 1, beta = 0;
 
                 // ウォームアップ & ワークスペース注入
-                CHECK_CUBLAS(cublasLtMatmul(ltHandle, opDesc, &alpha, d_a, adesc, d_b, bdesc, &beta, d_c, cdesc, d_c, cdesc, 
+                CHECK_CUBLAS(cublasLtMatmul(ltHandle, opDesc, &alpha, d_a, adesc, d_b, bdesc, &beta, d_c, cdesc, d_c, cdesc,
                                           NULL, d_workspace, workspaceSize, 0));
 
                 float sumtime = 0;
                 for (int iter = 0; iter < 100; iter++) {
                     CHECK_CUDA(cudaEventRecord(start));
-                    CHECK_CUBLAS(cublasLtMatmul(ltHandle, opDesc, &alpha, d_a, adesc, d_b, bdesc, &beta, d_c, cdesc, d_c, cdesc, 
+                    CHECK_CUBLAS(cublasLtMatmul(ltHandle, opDesc, &alpha, d_a, adesc, d_b, bdesc, &beta, d_c, cdesc, d_c, cdesc,
                                               NULL, d_workspace, workspaceSize, 0));
                     CHECK_CUDA(cudaEventRecord(stop));
                     CHECK_CUDA(cudaEventSynchronize(stop));
