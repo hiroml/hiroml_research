@@ -9,7 +9,7 @@ using namespace std;
 void write_file(vector<string> input)
 {
     ofstream writing_file;
-    string file_name = "./output/test.txt";
+    string file_name = "./output/h100.txt";
     writing_file.open(file_name);
     for (auto &i : input)
     {
@@ -22,7 +22,7 @@ void write_file(vector<string> input)
 int main()
 {
     vector<string> S;
-    int magicnum = 15;
+    int magicnum = 16;
     // サイズ
     long long m = pow(2, magicnum), n = pow(2, magicnum), k = pow(2, magicnum); // サイズを大きくすると性能が出やすい
 
