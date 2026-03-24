@@ -133,7 +133,7 @@ int main()
     // 後片付け
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
-    cublasLtMatmulDescDestroy(opDesc)
+    cublasLtMatmulDescDestroy(opDesc);
     cublasLtDestroy(ltHandle);
     cudaFree(workspace);
     cudaFree(d_a);
