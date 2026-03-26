@@ -22,7 +22,7 @@ void write_file(vector<string> input)
 int main()
 {
     vector<string> S;
-    int magicnum = 15;
+    int magicnum = 16;
     // サイズ
     long long m = pow(2, magicnum), n = pow(2, magicnum), k = pow(2, magicnum); // サイズを大きくすると性能が出やすい
 
@@ -37,7 +37,7 @@ int main()
     err = cudaMalloc(&d_c, sizeof(int32_t) * m * n);
     cout << "d_c: " << cudaGetErrorString(err) << endl;
     // 作業用メモリの確保
-    size_t workspaceSize = 32 * 1024 * 1024;
+    size_t workspaceSize = 256 * 1024 * 1024;
     void *workspace = nullptr;
     cudaMalloc(&workspace, workspaceSize);
 

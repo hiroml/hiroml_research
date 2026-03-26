@@ -24,7 +24,7 @@ void write_file(vector<string> input)
 int main()
 {
     vector<string> S;
-    int magicnum = 16;
+    int magicnum = 15;
     // サイズ
     long long m = pow(2, magicnum), n = pow(2, magicnum), k = pow(2, magicnum); // サイズを大きくすると性能が出やすい
 

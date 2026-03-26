@@ -3,6 +3,8 @@
 #include <cublasLt.h>
 #include <fstream>
 #include <bits/stdc++.h>
+#include <cuda_bf16.h>
+
 
 using namespace std;
 
@@ -22,22 +24,21 @@ void write_file(vector<string> input)
 int main()
 {
     vector<string> S;
-    int magicnum = 15;
+    int magicnum = 16;
     // サイズ
     long long m = pow(2, magicnum), n = pow(2, magicnum), k = pow(2, magicnum); // サイズを大きくすると性能が出やすい
 
     // メモリ確保
-    int8_t *d_a, *d_b;
-    int32_t *d_c;
+    __nv_bfloat16 *d_a, *d_b, *d_c;
     cudaError_t err;
-    err = cudaMalloc(&d_a, sizeof(int8_t) * m * k);
+    err = cudaMalloc(&d_a, sizeof(__nv_bfloat16) * m * k);
     cout << "d_a: " << cudaGetErrorString(err) << endl;
-    err = cudaMalloc(&d_b, sizeof(int8_t) * k * n);
+    err = cudaMalloc(&d_b, sizeof(__nv_bfloat16) * k * n);
     cout << "d_b: " << cudaGetErrorString(err) << endl;
-    err = cudaMalloc(&d_c, sizeof(int32_t) * m * n);
+    err = cudaMalloc(&d_c, sizeof(__nv_bfloat16) * m * n);
     cout << "d_c: " << cudaGetErrorString(err) << endl;
     // 作業用メモリの確保
-    size_t workspaceSize = 32 * 1024 * 1024;
+    size_t workspaceSize =256 * 1024 * 1024; 
     void *workspace = nullptr;
     cudaMalloc(&workspace, workspaceSize);
 
@@ -46,20 +47,16 @@ int main()
     cublasLtCreate(&ltHandle);
 
     // デスクリプタ設定
+    //内部累積32fのため32
     cublasLtMatmulDesc_t opDesc;
-    cublasLtMatmulDescCreate(&opDesc, CUBLAS_COMPUTE_32I, CUDA_R_32I);
-    // INT8ではこれがないと最適カーネルが選ばれない 23％しかでないっぽい
-    // 転置することによってメモリアクセス◎
-    cublasOperation_t transb = CUBLAS_OP_T;
-    cublasLtMatmulDescSetAttribute(opDesc,
-                                   CUBLASLT_MATMUL_DESC_TRANSB,
-                                   &transb, sizeof(transb));
+    cublasLtMatmulDescCreate(&opDesc, CUBLAS_COMPUTE_32F, CUDA_R_32F);
+    
     // 計測用イベントの作成
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    int32_t alpha = 1, beta = 0;
+    float alpha = 1.0, beta = 0.0;
 
     for (int ii = 3; ii <= magicnum; ii++)
     {
@@ -71,9 +68,9 @@ int main()
                 long long mm = pow(2, ii), nn = pow(2, jj), kk = pow(2, ll);
                 // レイアウトの作成
                 cublasLtMatrixLayout_t adesc, bdesc, cdesc;
-                cublasLtMatrixLayoutCreate(&adesc, CUDA_R_8I, mm, kk, mm);
-                cublasLtMatrixLayoutCreate(&bdesc, CUDA_R_8I, nn, kk, nn);
-                cublasLtMatrixLayoutCreate(&cdesc, CUDA_R_32I, mm, nn, mm);
+                cublasLtMatrixLayoutCreate(&adesc, CUDA_R_16BF, mm, kk, mm);
+                cublasLtMatrixLayoutCreate(&bdesc, CUDA_R_16BF, kk, nn, kk);
+                cublasLtMatrixLayoutCreate(&cdesc, CUDA_R_16BF, mm, nn, mm);
 
                 // アルゴリズム選択
                 cublasLtMatmulPreference_t preference;
@@ -143,5 +140,9 @@ int main()
     cudaFree(d_b);
     cudaFree(d_c);
     write_file(S);
+    //理論値95%と非常に良い結果。
+    //おそらく① 出力がINT32（4byte）なのでメモリ書き込みが重い
+    //INT8: 入力1byte × 2 + 出力4byte = 非効率
+    //BF16: 入力2byte × 2 + 出力2byte = 均一
     return 0;
 }
