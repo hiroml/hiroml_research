@@ -27,14 +27,13 @@ int main()
     long long m = pow(2, magicnum), n = pow(2, magicnum), k = pow(2, magicnum); // サイズを大きくすると性能が出やすい
 
     // メモリ確保
-    int8_t *d_a, *d_b;
-    int32_t *d_c;
+    int8_t *d_a, *d_b, *d_c;
     cudaError_t err;
     err = cudaMalloc(&d_a, sizeof(int8_t) * m * k);
     cout << "d_a: " << cudaGetErrorString(err) << endl;
     err = cudaMalloc(&d_b, sizeof(int8_t) * k * n);
     cout << "d_b: " << cudaGetErrorString(err) << endl;
-    err = cudaMalloc(&d_c, sizeof(int32_t) * m * n);
+    err = cudaMalloc(&d_c, sizeof(int8_t) * m * n);
     cout << "d_c: " << cudaGetErrorString(err) << endl;
     // 作業用メモリの確保
     size_t workspaceSize = 256 * 1024 * 1024;
@@ -47,19 +46,24 @@ int main()
 
     // デスクリプタ設定
     cublasLtMatmulDesc_t opDesc;
-    cublasLtMatmulDescCreate(&opDesc, CUBLAS_COMPUTE_32I, CUDA_R_32I);
+    cublasLtMatmulDescCreate(&opDesc, CUBLAS_COMPUTE_32I, CUDA_R_32F); // scaleする
     // INT8ではこれがないと最適カーネルが選ばれない 23％しかでないっぽい
     // 転置することによってメモリアクセス◎
+    // column-majorのため両方天地
     cublasOperation_t transb = CUBLAS_OP_T;
     cublasLtMatmulDescSetAttribute(opDesc,
                                    CUBLASLT_MATMUL_DESC_TRANSB,
                                    &transb, sizeof(transb));
+    cublasOperation_t transa = CUBLAS_OP_T;
+    cublasLtMatmulDescSetAttribute(opDesc,
+                                   CUBLASLT_MATMUL_DESC_TRANSB,
+                                   &transa, sizeof(transa));
     // 計測用イベントの作成
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    int32_t alpha = 1, beta = 0;
+    float alpha = 1.0f/127.0f, beta = 0.0f;
 
     for (int ii = 3; ii <= magicnum; ii++)
     {
@@ -71,9 +75,10 @@ int main()
                 long long mm = pow(2, ii), nn = pow(2, jj), kk = pow(2, ll);
                 // レイアウトの作成
                 cublasLtMatrixLayout_t adesc, bdesc, cdesc;
-                cublasLtMatrixLayoutCreate(&adesc, CUDA_R_8I, mm, kk, mm);
-                cublasLtMatrixLayoutCreate(&bdesc, CUDA_R_8I, nn, kk, nn);
-                cublasLtMatrixLayoutCreate(&cdesc, CUDA_R_32I, mm, nn, mm);
+                //読み込み方向を少し変更
+                cublasLtMatrixLayoutCreate(&adesc, CUDA_R_8I, kk, mm, kk);
+                cublasLtMatrixLayoutCreate(&bdesc, CUDA_R_8I, kk, nn, kk);
+                cublasLtMatrixLayoutCreate(&cdesc, CUDA_R_8I, mm, nn, mm);
 
                 // アルゴリズム選択
                 cublasLtMatmulPreference_t preference;
@@ -113,7 +118,7 @@ int main()
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop); // GPUの完了を待つ
                 cudaEventElapsedTime(&sumtime, start, stop);
-                
+
                 // 性能計算 (2 * M * N * K / 時間)
                 double ops = 2.0 * (long long)mm * (long long)nn * (long long)kk;
                 double tops = (ops / (sumtime / 100.0 / 1000.0)) / 1e12;
@@ -143,5 +148,6 @@ int main()
     cudaFree(d_b);
     cudaFree(d_c);
     write_file(S);
+    // 理論性能5%;;なんでこんな結果悪いのかわからん
     return 0;
 }

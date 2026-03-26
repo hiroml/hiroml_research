@@ -140,7 +140,7 @@ int main()
     cudaFree(d_b);
     cudaFree(d_c);
     write_file(S);
-    //理論値95%と非常に良い結果。
+    //理論値85%と非常に良い結果。
     //おそらく① 出力がINT32（4byte）なのでメモリ書き込みが重い
     //INT8: 入力1byte × 2 + 出力4byte = 非効率
     //BF16: 入力2byte × 2 + 出力2byte = 均一
