@@ -1,0 +1,5 @@
+#phase1 native
+
+nvGFLOPS:  316.425  (ネイティブ)
+blGFLOPS:  23209.3  (cublas)
+達成率1.36336%
