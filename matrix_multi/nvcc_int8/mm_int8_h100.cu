@@ -75,7 +75,7 @@ int main()
                 // 読み込み方向を少し変更
                 cublasLtMatrixLayoutCreate(&adesc, CUDA_R_8I, kk, mm, kk);
                 cublasLtMatrixLayoutCreate(&bdesc, CUDA_R_8I, kk, nn, kk);
-                cublasLtMatrixLayoutCreate(&cdesc, CUDA_R_32I, mm, nn, mm);
+                cublasLtMatrixLayoutCreate(&cdesc, CUDA_R_8I, mm, nn, mm);
 
                 // アルゴリズム選択
                 cublasLtMatmulPreference_t preference;
