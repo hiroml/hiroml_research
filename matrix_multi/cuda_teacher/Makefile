@@ -1,7 +1,7 @@
 # 実行ファイル名を a.out に設定
 TARGET  = a.out
-SRCS    = native_gemm.cu
-OBJS    = native_gemm.o
+SRCS    = sgemm_tiled.cu
+OBJS    = sgemm_tiled.o
 CC      = nvcc
 
 # ライブラリ指定
