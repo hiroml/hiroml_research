@@ -13,8 +13,9 @@ def main():
     print(f"デバイス一覧: {devices}")
     results=[]
     results.append("n, m, k, sumtime, tops\n")
-    sssize = 17
-    int n=sssize,m=sssize
+    sssize = 15
+    n=sssize
+    m=sssize
     for k in range(3,sssize):
         # 2. データの準備 (bfloat16を使うとTPUの性能が最大化されます)
         print(f"n,m,k{n}, {m}, {k}")
