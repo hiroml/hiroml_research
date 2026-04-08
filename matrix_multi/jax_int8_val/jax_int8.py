@@ -56,7 +56,7 @@ def main():
         tops = (ops/sum_time/1000.0)*100/1e12
         s = str(size_n) + ", "+ str(size_m) +", "+ str(size_k) + ", "+str(sum_time)+", "+str(tops)+"\n"
         results.append(s)
-    with open('./output.txt',mode='w') as f:
+    with open('./output_4.txt',mode='w') as f:
         for i in results:
             f.write(i)
 
