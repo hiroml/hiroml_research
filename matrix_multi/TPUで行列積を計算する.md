@@ -102,7 +102,7 @@ export RUNTIME_VERSION=v2-alpha-tpuv6e
 export PROJECT_ID=project-6fed2baa-e4f8-40e0-a2d
 export TPU_NAME=v5e-us
 export ZONE=us-west1-c
-export ACCELERATOR_TYPE=v5litepod-8
+export ACCELERATOR_TYPE=v5litepod-4
 export RUNTIME_VERSION=v2-alpha-tpuv5-lite
 ```
 
@@ -113,7 +113,7 @@ gcloud compute tpus tpu-vm create $TPU_NAME \
     --project=$PROJECT_ID \
     --zone=$ZONE \
     --accelerator-type=$ACCELERATOR_TYPE \
-    --version=$RUNTIME_VERSION
+    --version=$RUNTIME_VERSION \
     --spot
 ```
 
