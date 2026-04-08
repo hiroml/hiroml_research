@@ -13,7 +13,7 @@ def main():
     print(f"デバイス一覧: {devices}")
     results=[]
     results.append("n, m, k, sumtime, tops\n")
-    sssize = 15
+    sssize = 16
     n = sssize
     m= sssize
     
@@ -53,10 +53,10 @@ def main():
         print(f"実行時間{sum_time}")
         print(f"平均実行時間 ({n_iter}回): {avg_time:.6f} 秒")
         ops = 2.0*size_m*size_n*size_k
-        tops = (ops/sum_time/1000.0)*100/1e12
+        tops = (ops*n_iter)/sum_time/1e12
         s = str(size_n) + ", "+ str(size_m) +", "+ str(size_k) + ", "+str(sum_time)+", "+str(tops)+"\n"
         results.append(s)
-    with open('./output_4.txt',mode='w') as f:
+    with open('./output_4_16.txt',mode='w') as f:
         for i in results:
             f.write(i)
 
